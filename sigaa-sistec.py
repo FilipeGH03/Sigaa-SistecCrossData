@@ -84,14 +84,75 @@ def find_differences(sistec, sigaa):
     
     return apenas_sistec, apenas_sigaa
 
+def find_differences_with_course_check(sistec, sigaa):
+    cpfs_sistec_map = {CPF_to_int(s['NU_CPF']): s for s in sistec if CPF_to_int(s['NU_CPF']) is not None}
+    cpfs_sigaa_map = {CPF_to_int(sg['CPF']): sg for sg in sigaa if CPF_to_int(sg['CPF']) is not None}
+
+    cpfs_sistec_set = set(cpfs_sistec_map.keys())
+    cpfs_sigaa_set = set(cpfs_sigaa_map.keys())
+
+    # CPFs únicos em cada sistema (lógica original)
+    diff_sistec_only = cpfs_sistec_set - cpfs_sigaa_set
+    diff_sigaa_only = cpfs_sigaa_set - cpfs_sistec_set
+
+    # CPFs presentes em ambos os sistemas
+    cpfs_in_common = cpfs_sistec_set.intersection(cpfs_sigaa_set)
+
+    apenas_sistec = [{
+        'CPF': cpfs_sistec_map[cpf]['NU_CPF'],
+        'Nome': cpfs_sistec_map[cpf]['NO_ALUNO'],
+        'Curso': cpfs_sistec_map[cpf].get('NO_CICLO_MATRICULA', ''),
+        'Origem': 'SISTEC'
+    } for cpf in diff_sistec_only]
+
+    apenas_sigaa = [{
+        'CPF': cpfs_sigaa_map[cpf]['CPF'],
+        'Nome': cpfs_sigaa_map[cpf].get('Nome', ''),
+        'Curso': cpfs_sigaa_map[cpf].get('Curso', ''),
+        'Origem': 'SIGAA'
+    } for cpf in diff_sigaa_only]
+
+    # Nova seção para diferenças de curso
+    diferencas_curso = []
+    for cpf in cpfs_in_common:
+        sistec_record = cpfs_sistec_map[cpf]
+        sigaa_record = cpfs_sigaa_map[cpf]
+
+        curso_sistec = sistec_record.get('NO_CICLO_MATRICULA', '').split('-')[0].strip().upper()
+        curso_sigaa = sigaa_record.get('Curso', '').strip().upper()
+
+        if curso_sistec != curso_sigaa:
+            diferencas_curso.append({
+                'CPF': sistec_record['NU_CPF'],
+                'Nome_SISTEC': sistec_record['NO_ALUNO'],
+                'Curso_SISTEC': sistec_record.get('NO_CICLO_MATRICULA', ''),
+                'Nome_SIGAA': sigaa_record.get('Nome', ''),
+                'Curso_SIGAA': sigaa_record.get('Curso', ''),
+                'Tipo_Diferenca': 'Cursos_Diferentes'
+            })
+            
+    return apenas_sistec, apenas_sigaa, diferencas_curso
+
 def makeCSV(data, filename):
-    df = pd.DataFrame(data)
-    # Ordena as colunas de forma consistente
-    colunas_ordenadas = ['CPF', 'Nome', 'Curso', 'Situação', 'Origem']
-    # Seleciona apenas as colunas que existem nos dados
-    colunas_existentes = [col for col in colunas_ordenadas if col in df.columns]
-    df = df[colunas_existentes]
-    df.to_csv(filename, index=False)
+    """
+    Cria um arquivo CSV a partir de uma lista de dicionários.
+
+    Args:
+        data (list of dict): Uma lista de dicionários, onde cada dicionário
+                             representa uma linha do CSV e as chaves são os nomes das colunas.
+        filename (str): O nome do arquivo CSV a ser criado (ex: 'meu_arquivo.csv').
+    """
+    if not isinstance(data, list) or not all(isinstance(d, dict) for d in data):
+        print("❌ Erro: 'data' deve ser uma lista de dicionários.")
+        return
+
+    if not data:
+        print(f"⚠️ Atenção: A lista de dados está vazia. O arquivo '{filename}' será criado, mas estará vazio.")
+        df = pd.DataFrame() # Cria um DataFrame vazio
+    else:
+        df = pd.DataFrame(data)
+
+    df.to_csv(filename, index=False, encoding='utf-8') # Adicionado encoding para melhor compatibilidade
     print(f"✅ Arquivo '{filename}' criado com sucesso!")
 
 # Cria pasta se não existir
@@ -105,14 +166,15 @@ sigaa_filtrado = df_sigaa  # Você pode adicionar filtros para o SIGAA se necess
 lista_sistec = ToList(sistec_filtrado)
 lista_sigaa = ToList(sigaa_filtrado)
 
-apenas_sistec, apenas_sigaa = find_differences(lista_sistec, lista_sigaa)
-
+# apenas_sistec, apenas_sigaa = find_differences(lista_sistec, lista_sigaa)
+apenas_sistec, apenas_sigaa, diferencas_curso = find_differences_with_course_check(lista_sistec, lista_sigaa)
 # Resultados
 print(f"👥 Alunos apenas no SISTEC: {len(apenas_sistec)}")
 print(f"👥 Alunos apenas no SIGAA: {len(apenas_sigaa)}")
-
+print(f"📚 Diferenças de curso: {len(diferencas_curso)}")
 # Gerando os arquivos
 makeCSV(apenas_sistec, ARQ_SAIDA_SISTEC)
 makeCSV(apenas_sigaa, ARQ_SAIDA_SIGAA)
+makeCSV(diferencas_curso, os.path.join(PASTA_ARQUIVOS, 'diferencas_curso.csv'))
 
 input("✅ Processo concluído. Pressione Enter para sair...")
