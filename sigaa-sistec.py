@@ -71,7 +71,7 @@ def find_differences(sistec, sigaa):
     apenas_sistec = [{
         'CPF': s['NU_CPF'],
         'Nome': s['NO_ALUNO'],
-        'Situação': s.get('NO_STATUS_MATRICULA', ''),
+        'Curso': s.get('NO_CICLO_MATRICULA', ''),
         'Origem': 'SISTEC'
     } for s in sistec if CPF_to_int(s['NU_CPF']) in diff_sistec]
     
