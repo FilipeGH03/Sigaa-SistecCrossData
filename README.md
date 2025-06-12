@@ -1,6 +1,6 @@
 # ✅ Comparador Sistec-SIGAA
 
-Este script cruza dados de alunos entre os sistemas **Sistec** e **SIGAA**, verificando quais alunos do Sistec (em curso) também estão no SIGAA.
+Este script cruza dados de alunos entre os sistemas **Sistec** e **SIGAA**, via python e arquivos CSV.
 
 ---
 
@@ -41,8 +41,7 @@ Coloque todos os arquivos da seguinte forma:
 4. **O que acontece**
    - O script verifica se o `pandas` está instalado. Se não estiver, ele instala automaticamente.
    - Depois, ele lê os arquivos, filtra os alunos "EM_CURSO" do Sistec, e cruza os CPFs com os do SIGAA.
-   - Por fim, ele gera um novo arquivo:
-
+   - Por fim, ele gera os novos arquivos
 
 ---
 
