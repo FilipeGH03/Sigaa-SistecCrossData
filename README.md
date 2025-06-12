@@ -11,8 +11,9 @@ Coloque todos os arquivos da seguinte forma:
 [Pasta onde está o script]
 ├── sigaa-sistec.py
 └── CSVs
-├── sistec.csv
-└── sigaa.csv
+    ├── sistec.csv
+    └── sigaa.csv
+
 
 
 > **Importante:** Os arquivos `.csv` devem estar exatamente com os nomes:  
