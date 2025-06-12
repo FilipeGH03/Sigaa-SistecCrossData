@@ -30,8 +30,7 @@ Coloque todos os arquivos da seguinte forma:
    - Na instalação, marque a opção **"Add Python to PATH"**.
 
 2. **Prepare os arquivos**
-   - Crie uma pasta chamada `CSVs` no mesmo local do script.
-   - Coloque dentro dela os arquivos:
+   - Dentro da pasta CSVs coloque os arquivos:
      - `sistec.csv` (exportado do Sistec)
      - `sigaa.csv` (exportado do SIGAA)
 
