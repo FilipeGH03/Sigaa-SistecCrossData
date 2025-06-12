@@ -9,10 +9,10 @@ Este script cruza dados de alunos entre os sistemas **Sistec** e **SIGAA**, veri
 Coloque todos os arquivos da seguinte forma:
 
 [Pasta onde está o script]
-├── sigaa-sistec.py
-└── CSVs
-    ├── sistec.csv
-    └── sigaa.csv
+├── sigaa-sistec.py /n
+└── CSVs /n
+    ├── sistec.csv /n
+    └── sigaa.csv /n
 
 
 
