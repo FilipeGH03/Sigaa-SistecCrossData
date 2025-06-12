@@ -16,7 +16,7 @@ Coloque todos os arquivos da seguinte forma:
     └── sigaa.csv 
 ```
 
-
+---
 
 > **Importante:** Os arquivos `.csv` devem estar exatamente com os nomes:  
 > `sistec.csv` e `sigaa.csv`, dentro da pasta `CSVs`.
