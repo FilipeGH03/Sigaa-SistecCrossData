@@ -62,8 +62,3 @@ Coloque todos os arquivos da seguinte forma:
 
 ---
 
-## 💡 Dica para Windows
-
-Você pode transformar o script em um programa `.exe` com ícone e tudo, para rodar com clique duplo sem precisar instalar Python.  
-Se quiser, posso te ajudar com isso! 😄
-
