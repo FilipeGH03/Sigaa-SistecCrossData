@@ -24,7 +24,8 @@ import pandas as pd
 PASTA_ARQUIVOS = 'CSVs'
 ARQ_SISTEC = os.path.join(PASTA_ARQUIVOS, 'sistec.csv')
 ARQ_SIGAA = os.path.join(PASTA_ARQUIVOS, 'sigaa.csv')
-ARQ_SAIDA = os.path.join(PASTA_ARQUIVOS, 'sistec-sigaa.csv')
+ARQ_SAIDA_SISTEC = os.path.join(PASTA_ARQUIVOS, 'apenas_no_sistec.csv')
+ARQ_SAIDA_SIGAA = os.path.join(PASTA_ARQUIVOS, 'apenas_no_sigaa.csv')
 
 # Verifica se os arquivos de entrada existem
 if not os.path.exists(ARQ_SISTEC):
@@ -52,33 +53,44 @@ def CPF_to_int(cpf):
         return None
 
 def filter(df, col, col_n, filtro):
-    filtered = df[df[col[col_n]].astype(str).str.contains(filtro, na=False)]
-    return [dict(row) for _, row in filtered.iterrows()]
+    return df[df[col[col_n]].astype(str).str.contains(filtro, na=False)]
 
-def ToList(df, col):
+def ToList(df):
     return [dict(row) for _, row in df.iterrows()]
 
-def cross_Cpf(sistec, sigaa):
-    resultado = []
-    for s in sistec:
-        cpf_s = CPF_to_int(s.get('NU_CPF'))
-        if cpf_s is None:
-            continue
-        for sg in sigaa:
-            cpf_sigaa = CPF_to_int(sg.get('CPF'))
-            if cpf_sigaa is None:
-                continue
-            if cpf_s == cpf_sigaa:
-                resultado.append({
-                    'CPF': s['NU_CPF'],
-                    'Nome': s['NO_ALUNO'],
-                    'Curso': sg.get('Curso'),
-                    'Situação': s.get('NO_STATUS_MATRICULA')
-                })
-    return resultado
+def find_differences(sistec, sigaa):
+    # Converte CPFs para inteiros e remove duplicatas
+    cpfs_sistec = {CPF_to_int(s['NU_CPF']) for s in sistec if CPF_to_int(s['NU_CPF']) is not None}
+    cpfs_sigaa = {CPF_to_int(sg['CPF']) for sg in sigaa if CPF_to_int(sg['CPF']) is not None}
+    
+    # Encontra diferenças
+    diff_sistec = cpfs_sistec - cpfs_sigaa
+    diff_sigaa = cpfs_sigaa - cpfs_sistec
+    
+    # Formata os resultados
+    apenas_sistec = [{
+        'CPF': s['NU_CPF'],
+        'Nome': s['NO_ALUNO'],
+        'Situação': s.get('NO_STATUS_MATRICULA', ''),
+        'Origem': 'SISTEC'
+    } for s in sistec if CPF_to_int(s['NU_CPF']) in diff_sistec]
+    
+    apenas_sigaa = [{
+        'CPF': sg['CPF'],
+        'Nome': sg.get('Nome', ''),
+        'Curso': sg.get('Curso', ''),
+        'Origem': 'SIGAA'
+    } for sg in sigaa if CPF_to_int(sg['CPF']) in diff_sigaa]
+    
+    return apenas_sistec, apenas_sigaa
 
 def makeCSV(data, filename):
     df = pd.DataFrame(data)
+    # Ordena as colunas de forma consistente
+    colunas_ordenadas = ['CPF', 'Nome', 'Curso', 'Situação', 'Origem']
+    # Seleciona apenas as colunas que existem nos dados
+    colunas_existentes = [col for col in colunas_ordenadas if col in df.columns]
+    df = df[colunas_existentes]
     df.to_csv(filename, index=False)
     print(f"✅ Arquivo '{filename}' criado com sucesso!")
 
@@ -87,12 +99,20 @@ os.makedirs(PASTA_ARQUIVOS, exist_ok=True)
 
 # Processamento
 print("🔍 Processando dados...")
-sistec_filtrado = filter(df_sistec, col_sistec, 23, 'EM_CURSO')
-sigaa_lista = ToList(df_sigaa, col_sigaa)
-resultado = cross_Cpf(sistec_filtrado, sigaa_lista)
+sistec_filtrado = filter(df_sistec, col_sistec, 23, 'EM_CURSO')  # Ajuste o índice 23 conforme necessário
+sigaa_filtrado = df_sigaa  # Você pode adicionar filtros para o SIGAA se necessário
 
-# Resultado
-print(f"👥 Alunos encontrados no cruzamento: {len(resultado)}")
-makeCSV(resultado, ARQ_SAIDA)
+lista_sistec = ToList(sistec_filtrado)
+lista_sigaa = ToList(sigaa_filtrado)
+
+apenas_sistec, apenas_sigaa = find_differences(lista_sistec, lista_sigaa)
+
+# Resultados
+print(f"👥 Alunos apenas no SISTEC: {len(apenas_sistec)}")
+print(f"👥 Alunos apenas no SIGAA: {len(apenas_sigaa)}")
+
+# Gerando os arquivos
+makeCSV(apenas_sistec, ARQ_SAIDA_SISTEC)
+makeCSV(apenas_sigaa, ARQ_SAIDA_SIGAA)
 
 input("✅ Processo concluído. Pressione Enter para sair...")
