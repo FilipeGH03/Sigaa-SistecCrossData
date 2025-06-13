@@ -1,51 +1,19 @@
 import os
-import subprocess
 import sys
+import tkinter as tk
+from tkinter import messagebox, ttk
+import pandas as pd
 
-# Garante que o script usa o diretório onde ele está salvo
 script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_dir)
 
-# Instala pandas se necessário
-def install_pandas():
-    try:
-        import pandas as pd
-    except ImportError:
-        print("Instalando pandas...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas"])
-        import pandas as pd
-    print("✅ Pandas instalado com sucesso!")
-    print("📦 Versão do pandas:", pd.__version__)
-
-install_pandas()
-import pandas as pd
-
-# Caminhos dos arquivos
 PASTA_ARQUIVOS = 'CSVs'
 ARQ_SISTEC = os.path.join(PASTA_ARQUIVOS, 'sistec.csv')
 ARQ_SIGAA = os.path.join(PASTA_ARQUIVOS, 'sigaa.csv')
 ARQ_SAIDA_SISTEC = os.path.join(PASTA_ARQUIVOS, 'apenas_no_sistec.csv')
 ARQ_SAIDA_SIGAA = os.path.join(PASTA_ARQUIVOS, 'apenas_no_sigaa.csv')
+ARQ_DIFERENCAS_CURSO = os.path.join(PASTA_ARQUIVOS, 'diferencas_curso.csv')
 
-# Verifica se os arquivos de entrada existem
-if not os.path.exists(ARQ_SISTEC):
-    print(f"❌ Arquivo '{ARQ_SISTEC}' não encontrado. Por favor, coloque o arquivo na pasta '{PASTA_ARQUIVOS}' e rode novamente.")
-    input("Pressione Enter para sair...")
-    sys.exit(1)
-
-if not os.path.exists(ARQ_SIGAA):
-    print(f"❌ Arquivo '{ARQ_SIGAA}' não encontrado. Por favor, coloque o arquivo na pasta '{PASTA_ARQUIVOS}' e rode novamente.")
-    input("Pressione Enter para sair...")
-    sys.exit(1)
-
-# Lê os arquivos
-df_sistec = pd.read_csv(ARQ_SISTEC, sep=',')
-df_sigaa = pd.read_csv(ARQ_SIGAA, sep=',')
-
-col_sistec = df_sistec.columns.tolist()
-col_sigaa = df_sigaa.columns.tolist()
-
-# Funções auxiliares
 def CPF_to_int(cpf):
     try:
         return int(str(cpf).replace('.', '').replace('-', '').split('.')[0])
@@ -58,32 +26,6 @@ def filter(df, col, col_n, filtro):
 def ToList(df):
     return [dict(row) for _, row in df.iterrows()]
 
-def find_differences(sistec, sigaa):
-    # Converte CPFs para inteiros e remove duplicatas
-    cpfs_sistec = {CPF_to_int(s['NU_CPF']) for s in sistec if CPF_to_int(s['NU_CPF']) is not None}
-    cpfs_sigaa = {CPF_to_int(sg['CPF']) for sg in sigaa if CPF_to_int(sg['CPF']) is not None}
-    
-    # Encontra diferenças
-    diff_sistec = cpfs_sistec - cpfs_sigaa
-    diff_sigaa = cpfs_sigaa - cpfs_sistec
-    
-    # Formata os resultados
-    apenas_sistec = [{
-        'CPF': s['NU_CPF'],
-        'Nome': s['NO_ALUNO'],
-        'Curso': s.get('NO_CICLO_MATRICULA', ''),
-        'Origem': 'SISTEC'
-    } for s in sistec if CPF_to_int(s['NU_CPF']) in diff_sistec]
-    
-    apenas_sigaa = [{
-        'CPF': sg['CPF'],
-        'Nome': sg.get('Nome', ''),
-        'Curso': sg.get('Curso', ''),
-        'Origem': 'SIGAA'
-    } for sg in sigaa if CPF_to_int(sg['CPF']) in diff_sigaa]
-    
-    return apenas_sistec, apenas_sigaa
-
 def find_differences_with_course_check(sistec, sigaa):
     cpfs_sistec_map = {CPF_to_int(s['NU_CPF']): s for s in sistec if CPF_to_int(s['NU_CPF']) is not None}
     cpfs_sigaa_map = {CPF_to_int(sg['CPF']): sg for sg in sigaa if CPF_to_int(sg['CPF']) is not None}
@@ -91,11 +33,8 @@ def find_differences_with_course_check(sistec, sigaa):
     cpfs_sistec_set = set(cpfs_sistec_map.keys())
     cpfs_sigaa_set = set(cpfs_sigaa_map.keys())
 
-    # CPFs únicos em cada sistema (lógica original)
     diff_sistec_only = cpfs_sistec_set - cpfs_sigaa_set
     diff_sigaa_only = cpfs_sigaa_set - cpfs_sistec_set
-
-    # CPFs presentes em ambos os sistemas
     cpfs_in_common = cpfs_sistec_set.intersection(cpfs_sigaa_set)
 
     apenas_sistec = [{
@@ -112,7 +51,6 @@ def find_differences_with_course_check(sistec, sigaa):
         'Origem': 'SIGAA'
     } for cpf in diff_sigaa_only]
 
-    # Nova seção para diferenças de curso
     diferencas_curso = []
     for cpf in cpfs_in_common:
         sistec_record = cpfs_sistec_map[cpf]
@@ -130,51 +68,74 @@ def find_differences_with_course_check(sistec, sigaa):
                 'Curso_SIGAA': sigaa_record.get('Curso', ''),
                 'Tipo_Diferenca': 'Cursos_Diferentes'
             })
-            
+
     return apenas_sistec, apenas_sigaa, diferencas_curso
 
 def makeCSV(data, filename):
-    """
-    Cria um arquivo CSV a partir de uma lista de dicionários.
+    df = pd.DataFrame(data) if data else pd.DataFrame()
+    df.to_csv(filename, index=False, encoding='utf-8')
 
-    Args:
-        data (list of dict): Uma lista de dicionários, onde cada dicionário
-                             representa uma linha do CSV e as chaves são os nomes das colunas.
-        filename (str): O nome do arquivo CSV a ser criado (ex: 'meu_arquivo.csv').
-    """
-    if not isinstance(data, list) or not all(isinstance(d, dict) for d in data):
-        print("❌ Erro: 'data' deve ser uma lista de dicionários.")
-        return
+def atualizar_progresso(valor):
+    progress_bar['value'] = valor
+    root.update_idletasks()
 
-    if not data:
-        print(f"⚠️ Atenção: A lista de dados está vazia. O arquivo '{filename}' será criado, mas estará vazio.")
-        df = pd.DataFrame() # Cria um DataFrame vazio
-    else:
-        df = pd.DataFrame(data)
+def iniciar_processamento():
+    try:
+        os.makedirs(PASTA_ARQUIVOS, exist_ok=True)
+        atualizar_progresso(5)
 
-    df.to_csv(filename, index=False, encoding='utf-8') # Adicionado encoding para melhor compatibilidade
-    print(f"✅ Arquivo '{filename}' criado com sucesso!")
+        if not os.path.exists(ARQ_SISTEC) or not os.path.exists(ARQ_SIGAA):
+            messagebox.showerror("Erro", "Arquivos CSV não encontrados na pasta 'CSVs'.")
+            atualizar_progresso(0)
+            return
 
-# Cria pasta se não existir
-os.makedirs(PASTA_ARQUIVOS, exist_ok=True)
+        df_sistec = pd.read_csv(ARQ_SISTEC, sep=',')
+        df_sigaa = pd.read_csv(ARQ_SIGAA, sep=',')
+        atualizar_progresso(20)
 
-# Processamento
-print("🔍 Processando dados...")
-sistec_filtrado = filter(df_sistec, col_sistec, 23, 'EM_CURSO')  # Ajuste o índice 23 conforme necessário
-sigaa_filtrado = df_sigaa  # Você pode adicionar filtros para o SIGAA se necessário
+        col_sistec = df_sistec.columns.tolist()
+        sistec_filtrado = filter(df_sistec, col_sistec, 23, 'EM_CURSO')  # ajuste o índice conforme necessário
+        sigaa_filtrado = df_sigaa
+        atualizar_progresso(40)
 
-lista_sistec = ToList(sistec_filtrado)
-lista_sigaa = ToList(sigaa_filtrado)
+        lista_sistec = ToList(sistec_filtrado)
+        lista_sigaa = ToList(sigaa_filtrado)
+        atualizar_progresso(50)
 
-# apenas_sistec, apenas_sigaa = find_differences(lista_sistec, lista_sigaa)
-apenas_sistec, apenas_sigaa, diferencas_curso = find_differences_with_course_check(lista_sistec, lista_sigaa)
-# Resultados
-print(f"👥 Alunos apenas no SISTEC: {len(apenas_sistec)}")
-print(f"👥 Alunos apenas no SIGAA: {len(apenas_sigaa)}")
-print(f"📚 Diferenças de curso: {len(diferencas_curso)}")
-# Gerando os arquivos
-makeCSV(apenas_sistec, ARQ_SAIDA_SISTEC)
-makeCSV(apenas_sigaa, ARQ_SAIDA_SIGAA)
-makeCSV(diferencas_curso, os.path.join(PASTA_ARQUIVOS, 'diferencas_curso.csv'))
+        apenas_sistec, apenas_sigaa, diferencas_curso = find_differences_with_course_check(lista_sistec, lista_sigaa)
+        atualizar_progresso(70)
 
-input("✅ Processo concluído. Pressione Enter para sair...")
+        makeCSV(apenas_sistec, ARQ_SAIDA_SISTEC)
+        makeCSV(apenas_sigaa, ARQ_SAIDA_SIGAA)
+        makeCSV(diferencas_curso, ARQ_DIFERENCAS_CURSO)
+        atualizar_progresso(100)
+
+        messagebox.showinfo("Concluído", f"""
+✅ Arquivos gerados:
+👥 Apenas no SISTEC: {len(apenas_sistec)}
+👥 Apenas no SIGAA: {len(apenas_sigaa)}
+📚 Diferenças de curso: {len(diferencas_curso)}
+""")
+        atualizar_progresso(0)
+    except Exception as e:
+        atualizar_progresso(0)
+        messagebox.showerror("Erro", str(e))
+
+# Interface gráfica
+root = tk.Tk()
+root.title("Comparador SIGAA x SISTEC")
+root.geometry("430x250")
+
+label = tk.Label(root, text="Clique no botão para iniciar o processamento:", font=("Arial", 11))
+label.pack(pady=20)
+
+btn_processar = tk.Button(root, text="Iniciar Processamento", font=("Arial", 12), bg="green", fg="white", command=iniciar_processamento)
+btn_processar.pack(pady=10)
+
+progress_bar = ttk.Progressbar(root, orient="horizontal", length=300, mode="determinate")
+progress_bar.pack(pady=20)
+
+btn_sair = tk.Button(root, text="Sair", command=root.destroy)
+btn_sair.pack(pady=10)
+
+root.mainloop()

@@ -36,7 +36,8 @@ Coloque todos os arquivos da seguinte forma:
 
 3. **Execute o script**
    - Dê um duplo clique no arquivo `sigaa-sistec.py`
-   - Ou clique com o botão direito > "Abrir com..." > **Python**
+   - Ou clique com o botão direito > "Abrir com..." > **Python**]
+   - Na tela do app aperte no botão Iniciar Processamento e espere a saida
 
 4. **O que acontece**
    - O script verifica se o `pandas` está instalado. Se não estiver, ele instala automaticamente.
