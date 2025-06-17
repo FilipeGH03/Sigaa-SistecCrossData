@@ -4,12 +4,6 @@ Este script cruza dados de alunos entre os sistemas **Sistec** e **SIGAA**, usan
 
 ---
 
-## 📁 Estrutura esperada de pastas
-
-Os arquivos podem estar em qualquer local, pois são selecionados manualmente ao executar o programa.
-
----
-
 ## ▶️ Como usar
 
 1. **Instale o Python**
