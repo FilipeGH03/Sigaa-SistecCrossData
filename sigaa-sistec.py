@@ -1,7 +1,8 @@
 import os
 import sys
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox, ttk, filedialog
+
 
 import subprocess
 
@@ -85,40 +86,40 @@ def makeCSV(data, filename):
     df = pd.DataFrame(data) if data else pd.DataFrame()
     df.to_csv(filename, index=False, encoding='utf-8')
 
-def atualizar_progresso(valor):
+def update_progress(valor):
     progress_bar['value'] = valor
     root.update_idletasks()
 
 def iniciar_processamento():
     try:
         os.makedirs(PASTA_ARQUIVOS, exist_ok=True)
-        atualizar_progresso(5)
+        update_progress(5)
 
         if not os.path.exists(ARQ_SISTEC) or not os.path.exists(ARQ_SIGAA):
-            messagebox.showerror("Erro", "Arquivos CSV não encontrados na pasta 'CSVs'.")
-            atualizar_progresso(0)
+            messagebox.showerror("Erro", "Arquivos CSV não selecionados.")
+            update_progress(0)
             return
 
         df_sistec = pd.read_csv(ARQ_SISTEC, sep=',')
         df_sigaa = pd.read_csv(ARQ_SIGAA, sep=',')
-        atualizar_progresso(20)
+        update_progress(20)
 
         col_sistec = df_sistec.columns.tolist()
         sistec_filtrado = filter(df_sistec, col_sistec, 23, 'EM_CURSO')  # ajuste o índice conforme necessário
         sigaa_filtrado = df_sigaa
-        atualizar_progresso(40)
+        update_progress(40)
 
         lista_sistec = ToList(sistec_filtrado)
         lista_sigaa = ToList(sigaa_filtrado)
-        atualizar_progresso(50)
+        update_progress(50)
 
         apenas_sistec, apenas_sigaa, diferencas_curso = find_differences_with_course_check(lista_sistec, lista_sigaa)
-        atualizar_progresso(70)
+        update_progress(70)
 
         makeCSV(apenas_sistec, ARQ_SAIDA_SISTEC)
         makeCSV(apenas_sigaa, ARQ_SAIDA_SIGAA)
         makeCSV(diferencas_curso, ARQ_DIFERENCAS_CURSO)
-        atualizar_progresso(100)
+        update_progress(100)
 
         messagebox.showinfo("Concluído", f"""
 ✅ Arquivos gerados:
@@ -126,26 +127,68 @@ def iniciar_processamento():
 👥 Apenas no SIGAA: {len(apenas_sigaa)}
 📚 Diferenças de curso: {len(diferencas_curso)}
 """)
-        atualizar_progresso(0)
+        update_progress(0)
     except Exception as e:
-        atualizar_progresso(0)
+        update_progress(0)
         messagebox.showerror("Erro", str(e))
 
 # Interface gráfica
-root = tk.Tk()
-root.title("Comparador SIGAA x SISTEC")
-root.geometry("430x250")
+def start_interface():
+    global root, progress_bar, ARQ_SISTEC, ARQ_SIGAA
+    global label_sigaa, label_sistec
 
-label = tk.Label(root, text="Clique no botão para iniciar o processamento:", font=("Arial", 11))
-label.pack(pady=20)
+    root = tk.Tk()
+    root.title("🔍 Comparador SIGAA x SISTEC")
+    root.geometry("500x420")
+    root.configure(bg="#f9f9f9")
 
-btn_processar = tk.Button(root, text="Iniciar Processamento", font=("Arial", 12), bg="green", fg="white", command=iniciar_processamento)
-btn_processar.pack(pady=10)
+    fonte_titulo = ("Segoe UI", 12, "bold")
+    fonte_padrao = ("Segoe UI", 10)
 
-progress_bar = ttk.Progressbar(root, orient="horizontal", length=300, mode="determinate")
-progress_bar.pack(pady=20)
+    espaco = 8
 
-btn_sair = tk.Button(root, text="Sair", command=root.destroy)
-btn_sair.pack(pady=10)
+    tk.Label(root, text="Selecione os arquivos CSV:", font=fonte_titulo, bg="#f9f9f9").pack(pady=(15, espaco))
 
-root.mainloop()
+    btn_sigaa = tk.Button(root, text="📂 Selecionar arquivo SIGAA", font=fonte_padrao, bg="#e0f7fa", relief="groove", bd=2, command=select_sigaa)
+    btn_sigaa.pack(pady=(0, 3))
+    label_sigaa = tk.Label(root, text="Nenhum arquivo selecionado", font=("Segoe UI", 9), fg="gray", bg="#f9f9f9")
+    label_sigaa.pack(pady=(0, espaco))
+
+    btn_sistec = tk.Button(root, text="📂 Selecionar arquivo SISTEC", font=fonte_padrao, bg="#e0f7fa", relief="groove", bd=2, command=select_sistec)
+    btn_sistec.pack(pady=(0, 3))
+    label_sistec = tk.Label(root, text="Nenhum arquivo selecionado", font=("Segoe UI", 9), fg="gray", bg="#f9f9f9")
+    label_sistec.pack(pady=(0, espaco))
+
+    tk.Label(root, text="Depois de selecionar os arquivos:", font=fonte_titulo, bg="#f9f9f9").pack(pady=(10, espaco))
+
+    btn_processar = tk.Button(root, text="✅ Iniciar Processamento", font=fonte_padrao, bg="#4caf50", fg="white", relief="raised", bd=3, command=iniciar_processamento)
+    btn_processar.pack(pady=(0, espaco + 5))
+
+    progress_bar = ttk.Progressbar(root, orient="horizontal", length=350, mode="determinate")
+    progress_bar.pack(pady=(0, espaco + 10))
+
+    btn_sair = tk.Button(root, text="❌ Sair", font=fonte_padrao, bg="#ff5252", fg="white", relief="flat", command=root.destroy)
+    btn_sair.pack(pady=(0, 15))
+    root.mainloop()
+
+#Abre uma janela para o usuário selecionar um arquivo CSV do SIGAA, armazena o caminho do arquivo selecionado 
+#na variável global ARQ_SIGAA e atualiza o texto do label_sigaa com o nome do arquivo escolhido.
+def select_sigaa():
+    global ARQ_SIGAA
+    arquivo = filedialog.askopenfilename(title="Selecione o arquivo SIGAA", filetypes=[("CSV files", "*.csv")])
+    if arquivo:
+        ARQ_SIGAA = arquivo
+        label_sigaa.config(text=os.path.basename(arquivo), fg="black")
+
+
+#Abre uma janela para o usuário selecionar um arquivo CSV do SISTEC, armazena o caminho do arquivo selecionado 
+#na variável global ARQ_SISTEC e atualiza o texto do label_sistec com o nome do arquivo escolhido.
+def select_sistec():
+    global ARQ_SISTEC
+    arquivo = filedialog.askopenfilename(title="Selecione o arquivo SISTEC", filetypes=[("CSV files", "*.csv")])
+    if arquivo:
+        ARQ_SISTEC = arquivo
+        label_sistec.config(text=os.path.basename(arquivo), fg="black")
+
+
+start_interface()
