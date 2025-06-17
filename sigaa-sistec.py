@@ -2,6 +2,16 @@ import os
 import sys
 import tkinter as tk
 from tkinter import messagebox, ttk
+
+import subprocess
+
+def install_pandas():
+    try:
+        import pandas as pd
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas"])
+        
+install_pandas()
 import pandas as pd
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
