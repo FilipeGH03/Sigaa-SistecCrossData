@@ -8,7 +8,8 @@ Este script cruza dados de alunos entre os sistemas **Sistec** e **SIGAA**, usan
 
 1. **Instale o Python**
 
-   * Baixe e instale o Python: [https://www.python.org/downloads/](https://www.python.org/downloads/)
+   * Baixe e instale o Python automaticamente pelo arquivo `install-python.bat´ usando a senha de administrador
+   * Ou baixe e instale o Python manualmente pelo site oficial: [https://www.python.org/downloads/](https://www.python.org/downloads/)
    * Na instalação, marque a opção **"Add Python to PATH"**.
 
 2. **Execute o script**
