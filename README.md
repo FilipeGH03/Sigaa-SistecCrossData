@@ -39,7 +39,7 @@ Este script cruza dados de alunos entre os sistemas **Sistec** e **SIGAA**, usan
 ## 📌 Requisitos
 
 * Python 3.7 ou superior.
-* Conexão com a internet (somente na primeira execução, para instalar o python e o pandas automaticamente).
+* Conexão com a internet (somente na primeira execução, para instalar o pandas automaticamente).
 
 ---
 
